@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GDP Bar Chart</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.freecodecamp.org/testable-projects-fcc/v1/bundle.js"></script>
+
+</head>
+<body>
+    <h1 id="title">GDP Bar Chart</h1>
+    <svg id="chart" width="800" height="500"></svg>
+</body>
+<script>
+const svgWidth = 800;
+const svgHeight = 500;
+const margin = { top: 20, right: 30, bottom: 40, left: 50 };
+
+const width = svgWidth - margin.left - margin.right;
+const height = svgHeight - margin.top - margin.bottom;
+
+// Fetch the data
+d3.json('https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/GDP-data.json').then(data => {
+    const dataset = data.data;
+
+    // Parse the date from the dataset
+    const parseDate = d3.timeParse('%Y-%m-%d');
+    dataset.forEach(d => {
+        d[0] = parseDate(d[0]);
+    });
+
+    // Define scales
+    const xScale = d3.scaleTime()
+        .domain([d3.min(dataset, d => d[0]), d3.max(dataset, d => d[0])])
+        .range([0, width]);
+
+    const yScale = d3.scaleLinear()
+        .domain([0, d3.max(dataset, d => d[1])])
+        .range([height, 0]);
+
+    // Create the SVG container
+    const svg = d3.select('#chart')
+        .append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
+
+    // Create the axes
+    const xAxis = d3.axisBottom(xScale);
+    const yAxis = d3.axisLeft(yScale);
+
+    // Append the x-axis
+    svg.append('g')
+        .attr('id', 'x-axis')
+        .attr('transform', `translate(0,${height})`)
+        .call(xAxis)
+        .selectAll('.tick')
+        .attr('class', 'tick');
+
+    // Append the y-axis
+    svg.append('g')
+        .attr('id', 'y-axis')
+        .call(yAxis)
+        .selectAll('.tick')
+        .attr('class', 'tick');
+
+    // Create bars for the data
+    svg.selectAll('.bar')
+        .data(dataset)
+        .enter()
+        .append('rect')
+        .attr('class', 'bar')
+        .attr('x', d => xScale(d[0]))
+        .attr('y', d => yScale(d[1]))
+        .attr('width', width / dataset.length)
+        .attr('height', d => height - yScale(d[1]))
+        .attr('data-date', d => d3.timeFormat('%Y-%m-%d')(d[0]))
+        .attr('data-gdp', d => d[1]);
+
+    // Tooltip for mouseover
+    const tooltip = d3.select('body')
+        .append('div')
+        .attr('id', 'tooltip')
+        .style('position', 'absolute')
+        .style('visibility', 'hidden')
+        .style('background', 'lightgray')
+        .style('padding', '5px');
+
+    svg.selectAll('.bar')
+        .on('mouseover', (event, d) => {
+            tooltip.style('visibility', 'visible')
+                .attr('data-date', d3.timeFormat('%Y-%m-%d')(d[0]))
+                .text(`Date: ${d3.timeFormat('%Y-%m-%d')(d[0])}, GDP: ${d[1]}`);
+        })
+        .on('mousemove', (event) => {
+            tooltip.style('top', `${event.pageY - 10}px`)
+                .style('left', `${event.pageX + 10}px`);
+        })
+        .on('mouseout', () => tooltip.style('visibility', 'hidden'));
+});
+
+</script>
+</html>
